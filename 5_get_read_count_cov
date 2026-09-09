@@ -1,0 +1,53 @@
+#!/bin/bash
+
+#the table with contigs ID, species name, taxonomic ID, genome type (nuclear/mito/plastid)
+contigs="list/all_nuclear_organelle.info.with_salix_betula_populus.corrected"
+
+#remove mitochondrial or plastid contigs, unplaced scaffolds within the whole-genome assemblies
+grep -v -f index/ref_contig_annotation/not_nuclear.contigs_ext $contigs > list/contigs_species_whichgenome.remaining_exclude_contigs
+
+#return frequency, species, genome
+cut -f 2,4  list/contigs_species_whichgenome.remaining_exclude_contigs | sort | uniq > list/list_species_genome_selected
+
+#then mannually edited the list of coverage file of each bam (of each sample)
+ls $(pwd)/reads/genus/*.cov > list_bam_cov.genus
+
+> final_cov_ngslca.genus  # clear file
+
+> log
+
+#here is for genus, use species variable name for genus
+while IFS=" " read -r frequency species genome; do
+
+    # extract contigs for this species/genome
+    # awk -v species="$species" -v genome="$genome" '$2==species && $4==genome {print $1}' $contigs > "$species.$genome.contigs"
+    grep $species "$contigs"  | grep $genome | cut -f 1 > "$species.$genome.contigs"
+
+    echo "$species------------------------------" >> log.species
+    echo "$genome------------------------------" >> log.species
+
+    for cov in $(grep ${species} list_bam_cov.genus); do
+        [[ -e "$cov" ]] || continue
+
+        sample=$(basename "$cov" | cut -f1 -d.)
+        info=$(basename "$cov" | cut -f3- -d.)
+
+        echo $sample >> log
+        
+        echo $cov >> log
+
+        # subset coverage file
+        LC_ALL=C grep -w -f "$species.$genome.contigs" "$cov" > "$sample.$species.$genome.cov"
+
+        if [ "$genome" == "nuclear" ]; then
+            n_reads=$(awk '{sum+=$4} END{print sum+0}' "$sample.$species.$genome.cov")
+	    #recalculate the breadth and depth of coverage baesd on included contigs
+            breadth_cov=$(awk '{s5+=$5; s3+=$3} END{if(s3>0) print s5/s3; else print 0}' "$sample.$species.$genome.cov") # in decimal
+            depth_cov=$(awk '{s+=$7*$3; t+=$3} END{if(t>0) print s/t; else print 0}' "$sample.$species.$genome.cov")
+            echo -e "$sample\t$species\t$genome\tNA\t$info\t$n_reads\t$breadth_cov\t$depth_cov" >> final_cov_ngslca.genus
+        else
+            awk -v s="$sample" -v sp="$species" -v g="$genome" -v i="$info" 'NR>0{print s"\t"sp"\t"g"\t"$1"\t"i"\t"$4"\t"$6"\t"$7}' "$sample.$species.$genome.cov" >> final_cov_ngslca.genus
+
+        fi
+    done
+done < list/list_species_genome_selected.summary

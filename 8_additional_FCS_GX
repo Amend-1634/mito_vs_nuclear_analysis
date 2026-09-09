@@ -1,0 +1,28 @@
+# --- config ---
+BED="list/gx_details_genbank.20230416.bed"
+THREADS=${SLURM_CPUS_PER_TASK:-10}
+LIST="bamdam/bam_list_4genera"          # one BAM path per line, 292 lines total
+
+module load bioinfo-tools samtools    # adjust to your site's module names
+
+# --- pick this task's file ---
+bam=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$LIST")
+[[ -n "$bam" ]] || { echo "No file for task ${SLURM_ARRAY_TASK_ID}"; exit 1; }
+[[ -f "$bam" ]] || { echo "Missing: $bam"; exit 1; }
+
+kept_bam="${bam%.bam}.filter_fcs.bam"
+
+# index if needed (-L requires a sorted, indexed BAM)
+[[ -f "${bam}.bai" || -f "${bam%.bam}.bai" ]] || samtools index -@ "$THREADS" "$bam"
+
+# total reads
+total=$(samtools view -@ "$THREADS" -c "$bam")
+
+# split: reads overlapping BED -> discarded; reads NOT overlapping -> kept_bam
+samtools view -@ "$THREADS" -b -L "$BED" -U "$kept_bam" -o /dev/null "$bam"
+
+# kept reads + percentage
+kept=$(samtools view -@ "$THREADS" -c "$kept_bam")
+perc=$(awk -v k="$kept" -v t="$total" 'BEGIN{ if(t>0) printf "%.6f", k/t*100; else printf "NA" }')
+
+echo -e "${bam}\t${total}\t${kept}\t${perc}" >> 32_fcs_filter.results

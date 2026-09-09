@@ -1,0 +1,37 @@
+# --- ANGSD COMMAND ---
+angsd \
+  -b "${BAM_LIST}" \
+  -ref "${REF_GENOME}" \
+  -out "${OUT_PREFIX}" \
+  -nThreads "${THREADS}" \
+  -doHaploCall 1 \
+  -doCounts 1 \
+  -minQ 20 \
+  -minMapQ 20 \
+  -remove_bads 1 \
+  -uniqueOnly 1 \
+
+#####################
+#Step 5: Convert ANGSD output to VCF format
+#####################
+
+python parse_haplo_to_vcf.py -i ${OUT_PREFIX}.haplo.gz -o ${OUT_PREFIX}.vcf --sample-order bam.list
+
+ml vcftools
+vcf-concat *.vcf > all.vcf
+
+#####################
+#Step 6: Convert VCF output to .bed format for PCA
+#####################
+plink --vcf ${OUT_PREFIX}.vcf --make-bed --out ${OUT_PREFIX} --allow-extra-chr --double-id
+
+#####################
+#Step 7: Run PCA emu
+#####################
+
+#install PCA emu if not already installed
+pip install emu-popgen
+emu -t 8 -e 10 -o ${OUT_PREFIX}_pca -b ${OUT_PREFIX} -f 0.001
+
+#plot the first two PCs
+python3 11_elephantid_PCA.plot_pca.py all_mammoths_pca

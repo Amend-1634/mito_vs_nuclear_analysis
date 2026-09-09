@@ -1,0 +1,10 @@
+kraken2 \
+        --db "$db_path" \
+        --report "$outdir/${name}_${label}_report.txt" \
+        --report-minimizer-data \
+        --gzip-compressed \
+        --threads $threads \
+        --output "$outdir/${name}_${label}_output.txt" \
+        --unclassified-out "$outdir/${name}_${label}_unclas.fastq" \
+	--confidence 0 \
+        --memory-mapping "$reads"

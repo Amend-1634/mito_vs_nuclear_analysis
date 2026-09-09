@@ -1,0 +1,9 @@
+    fastp \
+      -i $dir/${filename}_1.fastq.gz \
+      -I $dir/${filename}_2.fastq.gz \
+      -m \
+      --merged_out $outdir/$filename.trim.fastq.gz \
+      --overlap_len_require 20 \
+      --overlap_diff_limit 1 \
+      --cut_mean_quality 30 --cut_front --cut_tail \
+      -l 30 -w 8 

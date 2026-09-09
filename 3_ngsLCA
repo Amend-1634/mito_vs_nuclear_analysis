@@ -1,0 +1,11 @@
+samtools merge ${ID}.merged.bam *.mapped.bam
+
+ngsLCA \
+    -simscorelow 0.95 \
+    -simscorehigh 1 \
+    -names "${NAMES}" \
+    -nodes "${NODES}" \
+    -acc2tax "${ACC2TAX}" \
+    -bam "${bam}" \
+    -outnames "$(basename $bam .bam)" \
+    -fix_ncbi 0

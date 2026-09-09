@@ -1,0 +1,59 @@
+STRANDED="ds"
+MINCOUNT=3
+MINSIM=0.95
+MODE=1
+
+# Input file
+INPUT_FILE="/cfs/klemming/projects/snic/snic2022-6-144/CHENYU/chap4_mito_nuclear/scripts_genus_260422/list/list_sample_bam_lca"
+
+# Get the specific line for this array task
+LINE=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$INPUT_FILE")
+
+# Parse the line into variables
+read ID bam lca <<< "$LINE"
+
+# Your processing commands go here
+echo "Processing sample: $ID"
+echo "BAM file: $bam"
+echo "LCA file: $lca"
+
+
+#while read ID bam lca; do     
+    # shrink
+        bamdam shrink \
+        --in_bam "${bam}" \
+        --in_lca "${lca}" \
+        --out_bam "${ID}.small.bam" \
+        --out_lca "${ID}.small.lca" \
+        --stranded "${STRANDED}" \
+        --show_progress \
+        --mincount ${MINCOUNT} \
+    --minsim ${MINSIM}
+
+if [ ! -s "${ID}.small.lca" ]; then
+    echo "bamdam shrink failed"
+    exit 1
+fi
+
+if [ "$(wc -l < "${ID}.small.lca")" -eq 0 ]; then
+    echo "no reads remained"
+    exit 1
+fi
+
+# compute
+bamdam compute \
+--in_bam "${ID}.small.bam" \
+--in_lca "${ID}.small.lca" \
+--out_tsv "${ID}.tsv" \
+--out_subs "${ID}.subs.txt" \
+--stranded "${STRANDED}" \
+--mode ${MODE} \
+--show_progress
+
+while read -r genus taxid; do
+bamdam plotdamage \
+--in_subs "${ID}.subs.txt" \
+--tax "$taxid" \
+--outplot "damageplot_${genus}_${taxid}_${ID}.png" \
+|| echo "Warning: bamdam failed for taxid $taxid (continuing)"
+done < /cfs/klemming/projects/snic/snic2022-6-144/CHENYU/chap4_mito_nuclear/scripts_genus_260422/list/list_genus_taxid

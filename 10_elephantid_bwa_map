@@ -1,0 +1,6 @@
+bwa aln -l 16500 -n 0.01 -o 2 -t ${THREADS} \
+    "${REF}" "${SAMPLE}.fastq" > "${SAMPLE}.sai"
+
+bwa samse "${REF}" "${SAMPLE}.sai" "${SAMPLE}.fastq" | \
+    samtools sort -@ ${THREADS} -o "${SAMPLE}.mammoth.sorted.bam" -
+

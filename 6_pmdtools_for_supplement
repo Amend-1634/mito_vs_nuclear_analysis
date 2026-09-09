@@ -1,0 +1,10 @@
+samtools view -@ 10 -h "$bam" |
+python2 /cfs/klemming/projects/snic/snic2022-6-144/CHENYU/applications/PMDtools/pmdtools.0.60.py \
+    --customterminus 0,-1 \
+    --header |
+samtools view -@ 10 -Sb - > "${bam%.bam}.ancient.bam"
+
+# read count
+n=$(samtools view -@ 10 -c "$bam")
+n_ancient=$(samtools view -@ 10 -c "${bam%.bam}.ancient.bam")
+echo -e "${bam%.bam}\t$n\t$n_ancient" >> n_reads_all

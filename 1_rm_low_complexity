@@ -1,0 +1,8 @@
+ml bioinfo-tools; ml prinseq/0.20.4
+
+COMPLEXITY_METHOD=dust			# dust is the standard used by BLAST. The entropy method is an alternative, but is not widely used.
+COMPLEXITY_THRESHOLD=4
+
+zcat $file | prinseq -fastq stdin \
+-out_good $FASTQ_OUTPUT/${filename}.rm_low_complex \
+-lc_method ${COMPLEXITY_METHOD} -lc_threshold ${COMPLEXITY_THRESHOLD}

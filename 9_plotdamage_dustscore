@@ -1,0 +1,22 @@
+samtools sort -n -@ "$THREADS" -o "${bam%.bam}.qsorted.bam" "$bam"
+
+bamdam compute --in_bam  "${bam%.bam}.qsorted.bam" --in_lca $lca  --stranded ds --plotdupdust "${bam%.bam}".png --show_progress --out_tsv "${bam%.bam}".tsv --out_subs "${bam%.bam}".subs
+
+#when it ran all, then summarize with this
+#out=33_mean_dust.tsv
+#: > "$out"                       # truncate first so re-runs don't append
+#for tsv in *.*.tsv; do
+#    [ -e "$tsv" ] || continue    # guard against no-match (glob stays literal)
+#    paste <(sed -n 2p "$tsv" | cut -f1,4,5) <(printf '%s\n' "$tsv") >> "$out"
+#done
+
+
+#check the proportion of reads with dust score below 4------------
+
+bamdam shrink --in_bam  "${bam%.bam}.qsorted.bam" --out_bam ${bam%.bam}.bamdam_dust_filt.bam --in_lca $lca --out_lca $lca.dust4 --stranded ds --dust_max 4
+
+# total reads
+total=$(samtools view -@ "$THREADS" -c "$bam")
+# kept reads + percentage
+kept=$(samtools view -@ "$THREADS" -c "$kept_bam")
+perc=$(awk -v k="$kept" -v t="$total" 'BEGIN{ if(t>0) printf "%.6f", k/t*100; else printf "NA" }')
